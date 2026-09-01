@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: silver_customers
+    description: Cleaned, renamed customer records from the Bronze CSV ingest. One row per customer.
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Joined", "Stayed", "Churned"]
+      - name: churn_category
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Price", "Competitor", "Dissatisfaction", "Attitude", "Other"]
+              config:
+                where: "customer_status = 'Churned'"

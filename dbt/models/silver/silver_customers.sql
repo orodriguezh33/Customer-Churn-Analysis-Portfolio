@@ -1,0 +1,22 @@
+select
+    Customer_ID as customer_id,
+    Gender as gender,
+    Age as age,
+    Married as is_married,
+    State as state,
+    Number_of_Referrals as number_of_referrals,
+    Tenure_in_Months as tenure_in_months,
+    Value_Deal as value_deal,
+    Contract as contract,
+    Payment_Method as payment_method,
+    Monthly_Charge as monthly_charge,
+    Monthly_Charge < 0 as has_negative_monthly_charge,
+    Total_Charges as total_charges,
+    Total_Refunds as total_refunds,
+    Total_Extra_Data_Charges as total_extra_data_charges,
+    Total_Long_Distance_Charges as total_long_distance_charges,
+    Total_Revenue as total_revenue,
+    Customer_Status as customer_status,
+    Churn_Category as churn_category,
+    Churn_Reason as churn_reason
+from {{ source('bronze', 'customer_data') }}

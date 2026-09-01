@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: bronze
+    catalog: churn_portfolio
+    schema: bronze
+    tables:
+      - name: customer_data
+        description: Raw ingest of data/Customer_Data.csv, loaded as-is via the Databricks setup guide (see databricks-setup.md, step 5).
