@@ -17,14 +17,18 @@ dbt/logs/
 skills
 AGENTS.md
 CLAUDE.md
-docs/powerbi-relationships-notes.md
+
 
 # Artefactos de notebooks: regenerables desde data/Customer_Data.csv (ver notebooks/04-09)
 data/processed/
 /models/
 skills/
-docs/
+# Keep this portfolio guide trackable while leaving existing local docs rules scoped.
+
+
 .mypy_cache
 /data
 
 /models
+/reports
+/docs-internos

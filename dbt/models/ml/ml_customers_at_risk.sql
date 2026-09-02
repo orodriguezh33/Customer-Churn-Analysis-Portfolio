@@ -28,6 +28,7 @@ profile as (
         number_of_referrals,
         monthly_charge,
         total_revenue,
+        total_refunds,
         has_negative_monthly_charge
     from {{ ref('gold_customer_data') }}
 )
@@ -37,6 +38,18 @@ select
     scores.churn_risk_score,
     scores.risk_tier,
     scores.predicted_churn,
+    case
+        when scores.churn_risk_score < 0.1 then '0.0-0.1'
+        when scores.churn_risk_score < 0.2 then '0.1-0.2'
+        when scores.churn_risk_score < 0.3 then '0.2-0.3'
+        when scores.churn_risk_score < 0.4 then '0.3-0.4'
+        when scores.churn_risk_score < 0.5 then '0.4-0.5'
+        when scores.churn_risk_score < 0.6 then '0.5-0.6'
+        when scores.churn_risk_score < 0.7 then '0.6-0.7'
+        when scores.churn_risk_score < 0.8 then '0.7-0.8'
+        when scores.churn_risk_score < 0.9 then '0.8-0.9'
+        else '0.9-1.0'
+    end as score_band,
     profile.gender,
     profile.age,
     case
@@ -61,6 +74,7 @@ select
     profile.number_of_referrals,
     profile.monthly_charge,
     profile.total_revenue,
+    profile.total_refunds,
     profile.has_negative_monthly_charge
 from scores
 inner join profile on scores.customer_id = profile.customer_id
