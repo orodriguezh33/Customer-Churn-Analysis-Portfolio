@@ -47,7 +47,6 @@ lo edites a mano.
 
    **Cópiala y guárdala** (por ejemplo en un archivo de notas local, no en
    el repo) — la vas a necesitar para el CLI en el paso 2.
-
 5. Dentro del workspace, revisa los límites vigentes: clic en tu ícono de
    usuario (esquina superior derecha) → **Settings** → busca la sección
    **Free Edition** (o **Usage**) → ahí ves el cupo de cómputo/almacenamiento
@@ -67,13 +66,11 @@ vez de solo la UI web.
    brew tap databricks/tap
    brew install databricks
    ```
-
 2. Verifica que quedó instalado:
 
    ```bash
    databricks --version
    ```
-
 3. Autentícate contra tu workspace (usa la URL que copiaste en el paso 1.4):
 
    ```bash
@@ -83,7 +80,6 @@ vez de solo la UI web.
    Esto abre el navegador, te pide iniciar sesión con la cuenta del paso 1,
    y al aceptar guarda un perfil OAuth en `~/.databrickscfg` en tu máquina
    (fuera del repo — nunca se commitea).
-
 4. Cuando el CLI te pregunte el nombre del perfil, ponle algo descriptivo,
    por ejemplo `churn-analysis`. **El CLI no siempre usa `DEFAULT`** — el
    nombre que quede guardado es el que tú escribas ahí, así que confirma
@@ -97,7 +93,6 @@ vez de solo la UI web.
    autenticó con OAuth de verdad) y usa ese nombre — en `[nombre-elegido]`
    — en el resto de esta guía. Este documento asume `churn-analysis`;
    reemplázalo si el tuyo se llama distinto.
-
 5. Confirma que el perfil quedó activo y apunta al workspace correcto:
 
    ```bash
@@ -155,7 +150,6 @@ Gold → agregada para BI).
    CREATE SCHEMA IF NOT EXISTS churn_portfolio.silver;
    CREATE SCHEMA IF NOT EXISTS churn_portfolio.gold;
    ```
-
 3. Corre cada línea con **Run** (o `Cmd+Enter` sobre la celda si es
    notebook).
 
@@ -164,8 +158,7 @@ proyecto):**
 
 El subcomando `databricks catalogs create` falla en Free Edition con
 `Metastore storage root URL does not exist` porque pide una ubicación de
-storage explícita. La forma que sí funciona es mandar el mismo `CREATE
-CATALOG` como una consulta SQL vía la Statement Execution API — usa el
+storage explícita. La forma que sí funciona es mandar el mismo `CREATE CATALOG` como una consulta SQL vía la Statement Execution API — usa el
 storage por defecto de Free Edition automáticamente:
 
 ```bash
@@ -194,11 +187,11 @@ pásalo con `--json @archivo.json` en vez de inline.
 
 **Qué va en cada schema:**
 
-| Schema   | Contenido                                                        |
-|----------|-------------------------------------------------------------------|
-| `bronze` | `Customer_Data.csv` cargado tal cual, sin transformar             |
-| `silver` | Datos limpios/tipados, columnas derivadas ya validadas            |
-| `gold`   | Tablas agregadas listas para que Power BI las consuma directamente|
+| Schema     | Contenido                                                          |
+| ---------- | ------------------------------------------------------------------ |
+| `bronze` | `Customer_Data.csv` cargado tal cual, sin transformar            |
+| `silver` | Datos limpios/tipados, columnas derivadas ya validadas             |
+| `gold`   | Tablas agregadas listas para que Power BI las consuma directamente |
 
 A partir de aquí, escribe siempre el nombre completo `churn_portfolio.<schema>.<tabla>` en tus queries — nunca solo `<tabla>`. Con varios catálogos en el mismo workspace, un nombre sin calificar puede resolver al catálogo equivocado sin avisarte.
 
@@ -221,10 +214,10 @@ Un Volume es donde vive el archivo crudo antes de convertirlo en tabla.
      "wait_timeout": "30s"
    }'
    ```
-
 4. Sube el archivo — dos formas, elige una:
 
    **Por la UI:**
+
    - Entra al volume `raw_files` recién creado.
    - Clic en **Upload to this volume**.
    - Arrastra `data/Customer_Data.csv` desde tu carpeta local, o clic en
@@ -238,7 +231,6 @@ Un Volume es donde vive el archivo crudo antes de convertirlo en tabla.
      dbfs:/Volumes/churn_portfolio/bronze/raw_files/Customer_Data.csv \
      --profile churn-analysis --overwrite
    ```
-
 5. Verifica que llegó:
 
    ```bash
@@ -272,14 +264,12 @@ Un Volume es donde vive el archivo crudo antes de convertirlo en tabla.
    ```bash
    databricks api post /api/2.0/sql/statements --profile churn-analysis --json @create_bronze.json
    ```
-
 3. Valida el resultado con una query de conteo — debe dar **6418**
    (ya verificado en este proyecto: coincide exacto con el CSV local):
 
    ```sql
    SELECT COUNT(*) FROM churn_portfolio.bronze.customer_data;
    ```
-
 4. Revisa rápidamente que las columnas quedaron como se esperaba:
 
    ```sql
@@ -292,6 +282,63 @@ Un Volume es donde vive el archivo crudo antes de convertirlo en tabla.
 No cargues el CSV directo a una tabla sin pasar por el Volume — así el
 archivo original queda intacto en Bronze, que es la regla de esa capa
 (ingesta cruda, sin transformar).
+
+---
+
+## 5.1 Ingesta de las salidas del pipeline de ML
+
+El objetivo 3 de `project-goals.md` ("Identificar un método para
+predecir futuros churners") se resuelve en Python
+(`notebooks/04`-`09`, fuera de este documento), pero sus salidas —
+scores de riesgo y métricas del modelo — necesitan llegar a
+`churn_portfolio.bronze` con el mismo patrón Volume → `read_files` →
+tabla Delta que el paso 4-5, para que dbt las convierta en la capa `ml`
+(ver `dbt-models.md` § 4). Mismo motivo que Bronze en general: los CSV
+entran tal cual, sin transformar; dbt es quien construye los modelos de
+negocio encima.
+
+`data/processed/` está gitignoreado (regenerable corriendo los notebooks
+`04`-`09` en orden, `random_state=42` los hace determinísticos), así que
+estos 6 CSV **no** están en el repo — hay que generarlos localmente antes
+de subirlos.
+
+1. Corre los notebooks `04` a `09` en orden. Confirma que
+   `data/processed/` tiene: `joined_scored.csv`, `model_candidates.csv`,
+   `model_final_metrics.csv`, `model_confusion_matrix.csv`,
+   `model_feature_importance.csv`, `model_roc_curve.csv`.
+2. Sube los 6 archivos al mismo volume `raw_files`, en un subdirectorio
+   `ml/` para no mezclarlos con `Customer_Data.csv`:
+
+   ```bash
+   databricks fs cp data/processed/joined_scored.csv \
+     dbfs:/Volumes/churn_portfolio/bronze/raw_files/ml/joined_scored.csv \
+     --overwrite --profile churn-analysis
+   ```
+
+   (repetir para los otros 5 — `--overwrite` porque se re-suben en cada
+   reentrenamiento).
+3. Corre `sql/003-create-ml-layer.sql` (mismo patrón que el paso 5: crea
+   el schema `churn_portfolio.ml` y 6 tablas bronze vía `read_files`)
+   contra el SQL Warehouse, vía **SQL Editor** o
+   `databricks api post /api/2.0/sql/statements`.
+4. Valida antes de correr dbt:
+
+   ```sql
+   SELECT COUNT(*) FROM churn_portfolio.bronze.customer_scores;  -- 405
+   ```
+
+   Si da otro número, revisa que el notebook `09` haya corrido completo
+   y que el CSV subido sea el más reciente.
+5. `cd dbt && dbt build --select ml+` — construye `ml_customers_at_risk`
+   y las 5 vistas de métricas, y corre el test de regresión
+   `assert_risk_tier_matches_score` (ver `dbt-models.md` § 4).
+
+**Reentrenar desincroniza el dashboard si te saltas este orden.** Si
+vuelves a correr los notebooks, el `final_model.joblib` y los CSV
+cambian, pero Databricks sigue mostrando los datos de la corrida
+anterior hasta que repitas los pasos 1-5 acá arriba — el dashboard de
+Power BI (DirectQuery) reflejaría scores viejos sin ningún aviso de que
+están desactualizados.
 
 ---
 
@@ -310,7 +357,6 @@ suelto.
    ```bash
    uv add databricks-connect
    ```
-
 2. En tu script o notebook local:
 
    ```python
@@ -320,10 +366,8 @@ suelto.
    df = spark.table("churn_portfolio.bronze.customer_data")
    df.count()   # debería dar 6418
    ```
-
 3. Usa el mismo nombre de perfil que confirmaste en el paso 2.4 dentro de
    `.profile("...")`.
-
 4. Ejecuta el script con `uv run` (no hace falta activar nada):
 
    ```bash
@@ -338,9 +382,10 @@ suelto.
 ## 7. Conectar Power BI a la capa Gold
 
 Las tablas agregadas en `churn_portfolio.gold` las construye dbt (ver
-`dbt-setup.md`, secciones 6 y 9 — ahí ya hay un modelo de ejemplo,
-`gold_customer_status_summary`, corriendo). Una vez que tengas ahí las
-tablas que necesitas para el dashboard, conecta Power BI así:
+`dbt-setup.md`, secciones 6 y 9 — ahí ya está `gold_customer_data`
+corriendo, la única tabla gold que consume el dashboard). Una vez que
+tengas ahí la tabla que necesitas para el dashboard, conecta Power BI
+así:
 
 1. Primero necesitas un SQL Warehouse activo: menú lateral → **SQL
    Warehouses** → si no hay ninguno, clic en **Create SQL Warehouse**,
@@ -370,16 +415,20 @@ tablas que necesitas para el dashboard, conecta Power BI así:
 ## 8. Checklist final
 
 - [ ] `databricks current-user me --profile churn-analysis` devuelve tu
-      usuario sin error.
+  usuario sin error.
 - [ ] `~/.databrickscfg` solo tiene el perfil OAuth (sin tokens en texto
-      plano sueltos).
+  plano sueltos).
 - [ ] `churn_portfolio` existe con schemas `bronze`, `silver`, `gold`.
 - [ ] `Customer_Data.csv` está en
-      `dbfs:/Volumes/churn_portfolio/bronze/raw_files/`.
+  `dbfs:/Volumes/churn_portfolio/bronze/raw_files/`.
 - [ ] `churn_portfolio.bronze.customer_data` tiene 6,418 filas (paso 5.3).
+- [ ] (Si ya corriste los notebooks de ML) los 6 CSV de
+  `data/processed/` están subidos a
+  `dbfs:/Volumes/churn_portfolio/bronze/raw_files/ml/` y
+  `churn_portfolio.bronze.customer_scores` tiene 405 filas (paso 5.1).
 - [ ] El SQL Warehouse tiene Auto Stop corto configurado.
 - [ ] Ningún token ni credential quedó pegado en un archivo del repo
-      (`git status` / revisión visual antes de cualquier commit).
+  (`git status` / revisión visual antes de cualquier commit).
 
 Una vez tildado todo esto, sigue con el checklist de `dbt-setup.md`
 (instalar dbt, correr `dbt debug`/`dbt build`) para que Silver y Gold

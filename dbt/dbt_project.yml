@@ -23,3 +23,6 @@ models:
     gold:
       +schema: gold
       +materialized: table
+    ml:
+      +schema: ml
+      +materialized: table

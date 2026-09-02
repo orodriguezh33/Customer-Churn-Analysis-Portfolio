@@ -8,4 +8,3 @@ select
         else '>100'
     end as monthly_charge_range
 from {{ ref('silver_customers') }}
-where customer_status in ('Churned', 'Stayed')

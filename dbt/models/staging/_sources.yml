@@ -7,3 +7,15 @@ sources:
     tables:
       - name: customer_data
         description: Raw ingest of data/Customer_Data.csv, loaded as-is via the Databricks setup guide (see databricks-setup.md, step 5).
+      - name: customer_scores
+        description: "churn_risk_score / risk_tier / predicted_churn for the 405 `Joined` customers, from notebooks/09_business_insights.ipynb. Loaded via sql/003-create-ml-layer.sql."
+      - name: model_candidates
+        description: "Accuracy/Precision/Recall/F1/ROC_AUC (default 0.5 threshold) for the 4 candidate models compared in notebooks/07_model_evaluation.ipynb, with is_winner flagging the model carried into 08."
+      - name: model_final_metrics
+        description: "Single-row metrics for the deployed model, computed at the operational decision threshold (not 0.5). From notebooks/08_final_model.ipynb."
+      - name: model_confusion_matrix
+        description: "Confusion matrix of the deployed model on the test set, long format (actual, predicted, customers), at the operational threshold. From notebooks/08_final_model.ipynb."
+      - name: model_feature_importance
+        description: "Standardized logistic-regression coefficients (magnitude + sign) for the deployed model. From notebooks/09_business_insights.ipynb."
+      - name: model_roc_curve
+        description: "ROC curve (fpr, tpr) of the deployed model on the test set, downsampled to ~200 points. From notebooks/08_final_model.ipynb."

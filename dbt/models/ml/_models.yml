@@ -1,0 +1,100 @@
+version: 2
+
+models:
+  - name: ml_customers_at_risk
+    description: >
+      Churn risk score for the 405 `Joined` customers (no known outcome yet), from
+      notebooks/09_business_insights.ipynb, joined to their gold_customer_data profile.
+      Deliberately not related to gold_customer_data inside Power BI: the two tables cover
+      disjoint populations (gold_customer_data measures churn that already happened; this
+      table measures expected churn for customers who haven't had an outcome yet).
+    columns:
+      - name: customer_id
+        description: Same customer_id as gold_customer_data / silver_customers.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gold_customer_data')
+                field: customer_id
+      - name: churn_risk_score
+        description: predict_proba of the deployed model (logistic_regression) for the churn class.
+      - name: risk_tier
+        description: >
+          Derived from churn_risk_score against the model's operational decision threshold
+          (not an independent fixed cutoff): Low < threshold, Medium [threshold, 0.60),
+          High >= 0.60. Kept consistent with predicted_churn by
+          assert_risk_tier_matches_score.sql.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Low", "Medium", "High"]
+      - name: predicted_churn
+        description: 1 when churn_risk_score >= the model's operational threshold, else 0. Never 1 with risk_tier = Low.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+      - name: age_group
+        description: "Age bucket: <20, 20-35, 35-50, >50."
+      - name: tenure_group
+        description: "Tenure bucket: <6 Months, 6-12 Months, 12-18 Months, 18-24 Months, >=24 Months."
+
+  - name: ml_model_candidates
+    description: >
+      Accuracy/Precision/Recall/F1/ROC_AUC at the default 0.5 threshold for the 4 candidate
+      models compared in notebooks/07_model_evaluation.ipynb. Model-selection history, not
+      the deployed model's performance -- see ml_model_metrics for that.
+    columns:
+      - name: model_name
+        data_tests:
+          - unique
+          - not_null
+      - name: is_winner
+        description: True for the single model carried forward into notebooks/08_final_model.ipynb.
+
+  - name: ml_model_metrics
+    description: >
+      Single-row performance summary of the deployed model, recomputed at its operational
+      decision threshold (not 0.5) in notebooks/08_final_model.ipynb.
+    columns:
+      - name: model_name
+        data_tests:
+          - not_null
+      - name: threshold
+        description: Decision threshold used for accuracy/precision/recall/f1 in this row. roc_auc is threshold-independent.
+
+  - name: ml_model_confusion_matrix
+    description: >
+      Confusion matrix of the deployed model on the test set (1,182 customers), long format,
+      at the operational threshold. From notebooks/08_final_model.ipynb.
+    columns:
+      - name: actual
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Stayed", "Churn"]
+      - name: predicted
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Stayed", "Churn"]
+
+  - name: ml_model_feature_importance
+    description: >
+      Standardized logistic-regression coefficients for the deployed model (magnitude in
+      importance, direction in signed_coefficient), from
+      notebooks/09_business_insights.ipynb. Not tree feature_importances_.
+    columns:
+      - name: feature
+        data_tests:
+          - unique
+          - not_null
+      - name: signed_coefficient
+        description: Raw coefficient (not absolute value) -- positive pushes churn risk up, negative pushes it down.
+
+  - name: ml_model_roc_curve
+    description: >
+      ROC curve (fpr, tpr) of the deployed model on the test set, downsampled to ~200 points.
+      From notebooks/08_final_model.ipynb.

@@ -8,7 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
-
+.vscode
 # dbt
 dbt/target/
 dbt/dbt_packages/
@@ -17,3 +17,14 @@ dbt/logs/
 skills
 AGENTS.md
 CLAUDE.md
+docs/powerbi-relationships-notes.md
+
+# Artefactos de notebooks: regenerables desde data/Customer_Data.csv (ver notebooks/04-09)
+data/processed/
+/models/
+skills/
+docs/
+.mypy_cache
+/data
+
+/models

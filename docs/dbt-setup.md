@@ -66,7 +66,7 @@ dbt/
       silver_customers.sql
       silver_customers.yml  # tests de esa tabla
     gold/
-      gold_customer_status_summary.sql
+      gold_customer_data.sql
 ```
 
 Vive en `dbt/` (no en la raíz del repo) para no chocar con la carpeta
@@ -190,23 +190,25 @@ Bronze se mueve de catálogo, solo cambias este archivo.
 - **`tests/assert_monthly_charge_non_negative.sql`** — test singular en
   `warn` (no bloquea `dbt build`) que cuenta filas con `monthly_charge <
   0`; mantiene visible la anomalía de datos documentada en `CLAUDE.md`.
-- **`models/gold/gold_customer_status_summary.sql`** — ejemplo mínimo:
-  conteo de clientes por `customer_status` con `%` sobre el total. Es el
-  punto de partida para las métricas reales de `project-goals.md` (Total
-  Customers, Churn Rate, New Joiners, etc.) — falta construir esas
-  agregaciones a medida que avance el ETL.
-- **`models/gold/gold_churn_data.sql`** — filtra `silver_customers` a
-  `customer_status IN ('Churned', 'Stayed')`: dataset etiquetado para
-  entrenar el modelo de predicción de churn (objetivo 3 de
-  `project-goals.md`). Agrega `churn_flag` (1 = Churned, 0 = Stayed) y
-  `monthly_charge_range` (`<20` / `20-50` / `50-100` / `>100`).
-- **`models/gold/gold_join_data.sql`** — filtra `silver_customers` a
-  `customer_status = 'Joined'`: clientes nuevos sin etiqueta, sobre los
-  que correría el modelo entrenado para predecir quién puede irse. Trae
-  el mismo `monthly_charge_range` que `gold_churn_data` (misma lógica,
-  para que el modelo vea la variable calculada igual en entrenamiento y
-  en scoring); no lleva `churn_flag` porque estos clientes todavía no
-  tienen etiqueta.
+- **`models/gold/gold_customer_data.sql`** — única tabla gold, consumida
+  directamente por Power BI: `silver_customers` completo (los 3 valores de
+  `customer_status`), sin filtrar. Agrega `churn_flag` (1 = Churned, 0 en
+  cualquier otro estado) y `monthly_charge_range` (`<20` / `20-50` /
+  `50-100` / `>100`). Las medidas DAX (`Total Customers`, `Total Churn`,
+  `Churn Rate`, `New Joiners`) filtran `customer_status` con `CALCULATE`
+  sobre esta misma tabla, así cualquier slicer del reporte (estado,
+  contrato, género, etc.) afecta a las cuatro por igual — ver
+  `.claude/skills/powerbi-modeling/`.
+  Antes existían `gold_churn_data.sql` (solo `Stayed`/`Churned`, pensada
+  como dataset etiquetado para el objetivo 3 de `project-goals.md`),
+  `gold_join_data.sql` (solo `Joined`, para scoring) y
+  `gold_customer_status_summary.sql` (conteo agregado por estado); se
+  eliminaron porque partir la tabla por `customer_status` rompía el
+  cross-filtering entre tarjetas en Power BI y su contenido ya lo cubre
+  `gold_customer_data` filtrando con DAX. Si más adelante se retoma el
+  modelo de predicción de churn, ese dataset de entrenamiento debería
+  vivir fuera de `gold/` (p. ej. una carpeta `ml/`) para no mezclar el
+  propósito de BI con el de ML.
 
 ---
 
@@ -287,7 +289,7 @@ databricks api post /api/2.0/sql/statements --profile churn-analysis --json '{
 - [ ] `dbt debug` desde `dbt/` termina en `All checks passed!`.
 - [ ] `dbt build` corre los 2 modelos y pasa los 4 tests.
 - [ ] `churn_portfolio.silver.silver_customers` y
-      `churn_portfolio.gold.gold_customer_status_summary` existen en
+      `churn_portfolio.gold.gold_customer_data` existen en
       Unity Catalog (Catalog Explorer o `SELECT * FROM ... LIMIT 10`).
 - [ ] `~/.dbt/profiles.yml` no tiene ningún `token:` en texto plano para
       el perfil `churn_portfolio` (usa `auth_type: oauth`).
