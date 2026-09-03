@@ -1,27 +1,27 @@
--- Ingesta de las salidas del pipeline de ML (notebooks 07-09) al catálogo de
--- Unity Catalog. Mismo patrón que 001-create-catalog.sql: los CSV crudos
--- entran a `bronze` (cargados tal cual, sin transformar) y es dbt quien los
--- convierte en la capa `ml` de negocio (ver dbt/models/ml/). El schema `ml`
--- se crea acá porque dbt no lo hace (dbt solo materializa modelos dentro de
--- schemas ya existentes).
+-- Ingestion of the ML pipeline outputs (notebooks 07-09) into the Unity
+-- Catalog catalog. Same pattern as 001-create-catalog.sql: the raw CSVs
+-- land in `bronze` (loaded as-is, untransformed) and it's dbt that
+-- converts them into the business `ml` layer (see dbt/models/ml/). The `ml` schema
+-- is created here because dbt doesn't do it (dbt only materializes models within
+-- already-existing schemas).
 CREATE SCHEMA IF NOT EXISTS churn_portfolio.ml;
 
--- Paso manual (fuera de SQL, igual que en 001): subir los 6 CSV al Volume
--- antes de poder leerlos acá. Reutiliza el Volume `raw_files` ya existente,
--- en un subdirectorio `ml/` para no mezclarlos con Customer_Data.csv.
+-- Manual step (outside SQL, same as in 001): upload the 6 CSVs to the Volume
+-- before they can be read here. Reuses the already-existing `raw_files`
+-- Volume, in an `ml/` subdirectory to avoid mixing them with Customer_Data.csv.
 --
 -- databricks fs cp data/processed/joined_scored.csv \
 --   dbfs:/Volumes/churn_portfolio/bronze/raw_files/ml/joined_scored.csv \
 --   --overwrite --profile churn-analysis
--- (repetir para model_candidates.csv, model_final_metrics.csv,
+-- (repeat for model_candidates.csv, model_final_metrics.csv,
 --  model_confusion_matrix.csv, model_feature_importance.csv, model_roc_curve.csv)
 --
--- Estos 6 CSV son regenerables (data/processed/ está gitignoreado): correr
--- notebooks 04-09 en orden y volver a subir antes de correr lo de abajo, o
--- el dashboard queda mostrando scores de una corrida vieja.
+-- These 6 CSVs are regenerable (data/processed/ is gitignored): run
+-- notebooks 04-09 in order and re-upload before running what's below, or
+-- the dashboard will keep showing scores from an old run.
 
--- churn_risk_score, risk_tier y predicted_churn por cliente `Joined`
--- (sin desenlace conocido). Ver notebooks/09_business_insights.ipynb.
+-- churn_risk_score, risk_tier, and predicted_churn per `Joined` customer
+-- (no known outcome). See notebooks/09_business_insights.ipynb.
 CREATE OR REPLACE TABLE churn_portfolio.bronze.customer_scores AS
 SELECT *
 FROM read_files(
@@ -31,7 +31,7 @@ FROM read_files(
   inferSchema => true
 );
 
--- Comparación de los 4 modelos candidatos (umbral 0.5). Ver
+-- Comparison of the 4 candidate models (threshold 0.5). See
 -- notebooks/07_model_evaluation.ipynb.
 CREATE OR REPLACE TABLE churn_portfolio.bronze.model_candidates AS
 SELECT *
@@ -42,8 +42,8 @@ FROM read_files(
   inferSchema => true
 );
 
--- Métricas del modelo final al umbral operativo (0.255, no 0.5 -- ver
--- notebooks/08_final_model.ipynb, sección "Threshold tuning"). Una sola fila.
+-- Final model metrics at the operational threshold (0.255, not 0.5 -- see
+-- notebooks/08_final_model.ipynb, "Threshold tuning" section). Single row.
 CREATE OR REPLACE TABLE churn_portfolio.bronze.model_final_metrics AS
 SELECT *
 FROM read_files(
@@ -53,8 +53,8 @@ FROM read_files(
   inferSchema => true
 );
 
--- Matriz de confusión del modelo final en formato largo (actual, predicted,
--- customers), calculada al mismo umbral operativo. Ver
+-- Confusion matrix of the final model in long format (actual, predicted,
+-- customers), computed at the same operational threshold. See
 -- notebooks/08_final_model.ipynb.
 CREATE OR REPLACE TABLE churn_portfolio.bronze.model_confusion_matrix AS
 SELECT *
@@ -65,8 +65,8 @@ FROM read_files(
   inferSchema => true
 );
 
--- Coeficientes estandarizados del modelo final (Logistic Regression),
--- con signo -- no "feature importance" de árbol. Ver
+-- Standardized coefficients of the final model (Logistic Regression),
+-- with sign -- not tree "feature importance". See
 -- notebooks/09_business_insights.ipynb.
 CREATE OR REPLACE TABLE churn_portfolio.bronze.model_feature_importance AS
 SELECT *
@@ -77,8 +77,8 @@ FROM read_files(
   inferSchema => true
 );
 
--- Puntos (fpr, tpr) de la curva ROC del modelo final, submuestreada a ~200
--- puntos. Ver notebooks/08_final_model.ipynb.
+-- ROC curve points (fpr, tpr) of the final model, downsampled to ~200
+-- points. See notebooks/08_final_model.ipynb.
 CREATE OR REPLACE TABLE churn_portfolio.bronze.model_roc_curve AS
 SELECT *
 FROM read_files(

@@ -1,6 +1,6 @@
--- Comparación de los 4 modelos candidatos al umbral por defecto (0.5), de
--- notebooks/07_model_evaluation.ipynb. Contexto histórico de selección de modelo -- no es
--- el desempeño del modelo desplegado (eso es ml_model_metrics, al umbral operativo).
+-- Comparison of the 4 candidate models at the default threshold (0.5), from
+-- notebooks/07_model_evaluation.ipynb. Historical model-selection context -- not the
+-- deployed model's performance (that's ml_model_metrics, at the operational threshold).
 {{ config(materialized='view') }}
 
 select

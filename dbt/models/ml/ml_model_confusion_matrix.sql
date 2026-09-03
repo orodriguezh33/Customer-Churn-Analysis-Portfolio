@@ -1,5 +1,5 @@
--- Matriz de confusión del modelo desplegado en formato largo (actual, predicted, customers),
--- calculada al umbral operativo, sobre el test set (1,182 clientes). Ver
+-- Confusion matrix of the deployed model in long format (actual, predicted, customers),
+-- computed at the operational threshold, on the test set (1,182 customers). See
 -- notebooks/08_final_model.ipynb.
 {{ config(materialized='view') }}
 

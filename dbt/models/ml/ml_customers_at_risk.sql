@@ -1,10 +1,11 @@
--- Puntuación de riesgo de churn para los 405 clientes `Joined` (sin desenlace conocido
--- todavía), calculada por notebooks/09_business_insights.ipynb. A propósito NO se
--- relaciona con gold_customer_data en Power BI: son poblaciones disjuntas
--- (gold_customer_data mide churn ya ocurrido; esta tabla mide churn esperado sobre quienes
--- todavía no tuvieron desenlace), así que una relación de modelo no aportaría nada y solo
--- sumaría una segunda relación bidireccional (ver docs/powerbi-relationships-notes.md §4).
--- Cada página de predicción usa sus propios slicers sobre esta tabla.
+-- Churn risk score for the 405 `Joined` customers (no known outcome yet),
+-- computed by notebooks/09_business_insights.ipynb. Deliberately NOT related
+-- to gold_customer_data in Power BI: they are disjoint populations
+-- (gold_customer_data measures churn that already happened; this table measures expected
+-- churn for customers who haven't had an outcome yet), so a model relationship wouldn't add
+-- anything and would only add a second bidirectional relationship (see
+-- docs/powerbi-relationships-notes.md §4).
+-- Each prediction page uses its own slicers on this table.
 with scores as (
     select
         Customer_ID as customer_id,

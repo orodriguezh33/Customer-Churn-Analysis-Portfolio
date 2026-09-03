@@ -1,68 +1,69 @@
 # Customer Churn Analysis Portfolio
 
-Proyecto end-to-end para analizar churn de clientes, construir una arquitectura
-analitica reproducible y priorizar clientes con riesgo de abandono.
+End-to-end project to analyze customer churn, build a reproducible analytics
+architecture, and prioritize customers at risk of churning.
 
-El flujo cubre ingesta de datos, transformaciones con dbt, analisis
-exploratorio, entrenamiento de modelos, seleccion de umbral operativo y una
-capa final para consumo en Power BI.
+The flow covers data ingestion, dbt transformations, exploratory analysis,
+model training, operational threshold selection, and a final layer for
+consumption in Power BI.
 
-## Demo Visual
+## Visual Demo
 
 ![Dashboard Summary](img/01-Summary.png)
 
 ![Churn Prediction](img/02-Churn-prediction.png)
 
-## Resultados Principales
+## Key Results
 
-| Area                                                       |           Resultado |
-| ---------------------------------------------------------- | ------------------: |
-| Clientes en dataset fuente                                 |               6,418 |
-| Clientes con desenlace conocido (`Stayed` + `Churned`) |               6,007 |
-| Clientes con churn historico                               |               1,732 |
-| Churn rate historico                                       |               28.8% |
-| Clientes`Joined` puntuados por el modelo                 |                 405 |
-| Clientes predichos como churn                              |                 280 |
-| Modelo final                                               | Logistic Regression |
-| Umbral operativo                                           |              0.2545 |
-| Recall final                                               |              0.8240 |
-| ROC AUC final                                              |              0.8662 |
+| Area                                                |              Result |
+| --------------------------------------------------- | ------------------: |
+| Customers in source dataset                         |               6,418 |
+| Customers with known outcome (`Stayed` + `Churned`) |               6,007 |
+| Customers with historical churn                     |               1,732 |
+| Historical churn rate                               |               28.8% |
+| `Joined` customers scored by the model              |                 405 |
+| Customers predicted as churn                        |                 280 |
+| Final model                                         | Logistic Regression |
+| Operational threshold                               |              0.2545 |
+| Final recall                                        |              0.8240 |
+| Final ROC AUC                                       |              0.8662 |
 
-El modelo se optimizo para priorizar recall, ya que en un caso de retencion es
-preferible identificar mas clientes en riesgo aunque aumenten los falsos
-positivos.
+The model was optimized to prioritize recall, since in a retention use case it
+is preferable to identify more at-risk customers even if false positives
+increase.
 
-## Arquitectura Medallion
+## Medallion Architecture
 
 ![Medallion Architecture](img/03-Medallion-architecture.png)
 
 ```text
-CSV fuente
+Source CSV
   -> Databricks Bronze
   -> dbt Silver
   -> dbt Gold
-  -> notebooks de Machine Learning
+  -> Machine Learning notebooks
   -> dbt ML
   -> Power BI
 ```
 
-La capa Bronze conserva el dato crudo. Silver normaliza nombres y tipos. Gold
-agrega variables analiticas para BI. La capa ML publica scores, metricas,
-matriz de confusion, curva ROC e importancia de variables para el dashboard.
+The Bronze layer preserves the raw data. Silver normalizes names and types.
+Gold aggregates analytical variables for BI. The ML layer publishes scores,
+metrics, the confusion matrix, the ROC curve, and feature importance for the
+dashboard.
 
-## Modelo Final
+## Final Model
 
 ![Model Performance](img/05.1-Model-performance.png)
 
-## Modelo Optimizado
+## Optimized Model
 
 ![Model Performance](img/05.1-Optimized-model.png)
 
-## Matriz de confusion
+## Confusion Matrix
 
 ![Confusion Matrix](img/05.2-Confusion-matriz.png)
 
-Variables mas influyentes del modelo final:
+Most influential variables in the final model:
 
 - `Monthly_Charge`
 - `Contract_Month-to-Month`
@@ -70,43 +71,43 @@ Variables mas influyentes del modelo final:
 - `Value_Deal_Deal 5`
 - `Age`
 
-## Estructura del Repositorio
+## Repository Structure
 
-| Ruta           | Contenido                                              |
-| -------------- | ------------------------------------------------------ |
-| `data/`      | Dataset fuente y salidas procesadas del pipeline ML    |
-| `notebooks/` | Flujo analitico del`01` al `09`                    |
-| `sql/`       | Scripts de Databricks para catalogos, Bronze y capa ML |
-| `dbt/`       | Modelos Silver, Gold, ML, sources y tests              |
-| `models/`    | Modelos entrenados serializados                        |
-| `img/`       | Capturas y graficos usados en la documentacion         |
-| `docs/`      | Documentacion oficial del proyecto                     |
+| Path         | Contents                                                  |
+| ------------ | --------------------------------------------------------- |
+| `data/`      | Source dataset and processed outputs from the ML pipeline |
+| `notebooks/` | Analytical flow from `01` to `09`                         |
+| `sql/`       | Databricks scripts for catalogs, Bronze, and the ML layer |
+| `dbt/`       | Silver, Gold, ML models, sources, and tests               |
+| `models/`    | Serialized trained models                                 |
+| `img/`       | Screenshots and charts used in the documentation          |
+| `docs/`      | Official project documentation                            |
 
-## Como Reproducir
+## How To Reproduce
 
-Instalar dependencias:
+Install dependencies:
 
 ```bash
 uv sync
 ```
 
-Ejecutar notebooks:
+Run notebooks:
 
 ```bash
 uv run jupyter lab
 ```
 
-Ejecutar dbt:
+Run dbt:
 
 ```bash
 cd dbt
 dbt build
 ```
 
-El pipeline de notebooks debe correrse en orden, porque las salidas de
-`data/processed/` alimentan la capa ML y el dashboard.
+The notebook pipeline must be run in order, because the outputs from
+`data/processed/` feed the ML layer and the dashboard.
 
-## Documentacion
+## Documentation
 
-- [Ingenieria de datos](docs/data-engineering.md)
-- [Modelado e insights](docs/modeling-and-insights.md)
+- [Data engineering](docs/data-engineering.md)
+- [Modeling and insights](docs/modeling-and-insights.md)

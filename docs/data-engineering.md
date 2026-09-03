@@ -1,32 +1,32 @@
-# Ingenieria de Datos
+# Data Engineering
 
-Este documento resume la parte de ingenieria del proyecto: ingesta,
-transformaciones, arquitectura medallion, modelos dbt y controles de calidad.
+This document summarizes the engineering side of the project: ingestion,
+transformations, medallion architecture, dbt models, and quality controls.
 
-## Objetivo
+## Objective
 
-Construir una base analitica reproducible a partir de `data/Customer_Data.csv`
-para responder preguntas de churn historico, perfil de clientes y prediccion de
-clientes nuevos.
+Build a reproducible analytics foundation from `data/Customer_Data.csv` to
+answer questions about historical churn, customer profile, and prediction for
+new customers.
 
-## Fuente de Datos
+## Data Source
 
-| Elemento            |                      Valor |
-| ------------------- | -------------------------: |
-| Archivo fuente      | `data/Customer_Data.csv` |
-| Filas               |                      6,418 |
-| Columnas            |                         32 |
-| Clientes`Stayed`  |                      4,275 |
-| Clientes`Churned` |                      1,732 |
-| Clientes`Joined`  |                        411 |
+| Element             |                    Value |
+| ------------------- | -----------------------: |
+| Source file         | `data/Customer_Data.csv` |
+| Rows                |                    6,418 |
+| Columns             |                       32 |
+| `Stayed` customers  |                    4,275 |
+| `Churned` customers |                    1,732 |
+| `Joined` customers  |                      411 |
 
-La columna objetivo es `Customer_Status`, con tres estados:
+The target column is `Customer_Status`, with three states:
 
-- `Stayed`: cliente con desenlace conocido que permanece.
-- `Churned`: cliente con desenlace conocido que abandono.
-- `Joined`: cliente nuevo, sin desenlace conocido; se usa para scoring.
+- `Stayed`: customer with a known outcome who remains.
+- `Churned`: customer with a known outcome who churned.
+- `Joined`: new customer, with no known outcome yet; used for scoring.
 
-## Arquitectura Medallion
+## Medallion Architecture
 
 ```text
 data/Customer_Data.csv
@@ -39,87 +39,87 @@ data/Customer_Data.csv
 
 ### Bronze
 
-La capa Bronze se crea con `sql/001-create-catalog.sql`.
+The Bronze layer is created with `sql/001-create-catalog.sql`.
 
-Responsabilidad:
+Responsibility:
 
-- Crear el catalogo `churn_portfolio`.
-- Crear schemas `bronze`, `silver` y `gold`.
-- Cargar el CSV crudo como tabla Delta en
+- Create the `churn_portfolio` catalog.
+- Create the `bronze`, `silver`, and `gold` schemas.
+- Load the raw CSV as a Delta table into
   `churn_portfolio.bronze.customer_data`.
 
-La tabla Bronze conserva el dato lo mas cercano posible al origen.
+The Bronze table keeps the data as close to the source as possible.
 
 ### Silver
 
-Modelo principal: `dbt/models/silver/silver_customers.sql`.
+Main model: `dbt/models/silver/silver_customers.sql`.
 
-Responsabilidad:
+Responsibility:
 
-- Renombrar columnas a `snake_case`.
-- Mantener una fila por cliente.
-- Conservar atributos demograficos, geograficos, servicios, contrato, cargos y
-  estado del cliente.
-- Marcar la anomalia `has_negative_monthly_charge`.
+- Rename columns to `snake_case`.
+- Keep one row per customer.
+- Preserve demographic, geographic, service, contract, charge, and customer
+  status attributes.
+- Flag the `has_negative_monthly_charge` anomaly.
 
-Tests relevantes:
+Relevant tests:
 
-- `customer_id` unico y no nulo.
-- `customer_status` limitado a `Joined`, `Stayed`, `Churned`.
-- `churn_category` validado para clientes `Churned`.
+- `customer_id` unique and not null.
+- `customer_status` limited to `Joined`, `Stayed`, `Churned`.
+- `churn_category` validated for `Churned` customers.
 
 ### Gold
 
-Modelos principales:
+Main models:
 
 - `dbt/models/gold/gold_customer_data.sql`
 - `dbt/models/gold/gold_customer_services.sql`
 
-Responsabilidad de `gold_customer_data`:
+Responsibility of `gold_customer_data`:
 
-- Crear `churn_flag`.
-- Crear rangos de cargo mensual.
-- Entregar una tabla central para metricas y segmentacion en BI.
+- Create `churn_flag`.
+- Create monthly charge ranges.
+- Deliver a central table for BI metrics and segmentation.
 
-Responsabilidad de `gold_customer_services`:
+Responsibility of `gold_customer_services`:
 
-- Despivotar atributos de servicios.
-- Crear una vista con grano cliente-servicio.
-- Facilitar analisis de adopcion de servicios en Power BI.
+- Unpivot service attributes.
+- Create a view with customer-service grain.
+- Enable service-adoption analysis in Power BI.
 
 ### ML
 
-Los notebooks generan salidas en `data/processed/`. Luego
-`sql/003-create-ml-layer.sql` las carga en Bronze y dbt las publica en el
-schema `ml`.
+The notebooks generate outputs in `data/processed/`. Then
+`sql/003-create-ml-layer.sql` loads them into Bronze and dbt publishes them in
+the `ml` schema.
 
-Modelos dbt de la capa ML:
+dbt models in the ML layer:
 
-| Modelo                          | Uso                                     |
-| ------------------------------- | --------------------------------------- |
-| `ml_customers_at_risk`        | Scores de churn para clientes`Joined` |
-| `ml_model_candidates`         | Comparacion de modelos candidatos       |
-| `ml_model_metrics`            | Metricas finales del modelo desplegado  |
-| `ml_model_confusion_matrix`   | Matriz de confusion del modelo final    |
-| `ml_model_feature_importance` | Variables mas influyentes               |
-| `ml_model_roc_curve`          | Puntos de la curva ROC                  |
+| Model                         | Use                                 |
+| ----------------------------- | ----------------------------------- |
+| `ml_customers_at_risk`        | Churn scores for `Joined` customers |
+| `ml_model_candidates`         | Comparison of candidate models      |
+| `ml_model_metrics`            | Final metrics of the deployed model |
+| `ml_model_confusion_matrix`   | Confusion matrix of the final model |
+| `ml_model_feature_importance` | Most influential variables          |
+| `ml_model_roc_curve`          | ROC curve points                    |
 
-## Calidad de Datos
+## Data Quality
 
-Controles y decisiones visibles en el proyecto:
+Controls and decisions visible in the project:
 
-- `Customer_ID` se valida como unico y no nulo en dbt.
-- `Customer_Status` se valida contra valores aceptados.
-- `Monthly_Charge < 0` se marca como anomalia. El dataset contiene 107 filas en
-  esa condicion.
-- Los clientes con cargos mensuales negativos se excluyen del entrenamiento y
-  scoring del modelo.
-- La capa ML valida que `risk_tier` y `predicted_churn` sean consistentes con
-  `churn_risk_score`.
+- `Customer_ID` is validated as unique and not null in dbt.
+- `Customer_Status` is validated against accepted values.
+- `Monthly_Charge < 0` is flagged as an anomaly. The dataset contains 107 rows
+  in that condition.
+- Customers with negative monthly charges are excluded from model training and
+  scoring.
+- The ML layer validates that `risk_tier` and `predicted_churn` are consistent
+  with `churn_risk_score`.
 
-## Reproducibilidad
+## Reproducibility
 
-Comandos principales:
+Main commands:
 
 ```bash
 uv sync
@@ -128,16 +128,16 @@ cd dbt
 dbt build
 ```
 
-Orden esperado del flujo:
+Expected flow order:
 
-1. Cargar `Customer_Data.csv` en Bronze.
-2. Ejecutar `dbt build` para Silver y Gold.
-3. Ejecutar notebooks `01` a `09`.
-4. Cargar salidas de `data/processed/` en Bronze ML.
-5. Ejecutar `dbt build` para publicar modelos ML.
-6. Consumir tablas Gold y ML desde Power BI.
+1. Load `Customer_Data.csv` into Bronze.
+2. Run `dbt build` for Silver and Gold.
+3. Run notebooks `01` through `09`.
+4. Load outputs from `data/processed/` into ML Bronze.
+5. Run `dbt build` to publish ML models.
+6. Consume Gold and ML tables from Power BI.
 
-## Evidencia Visual
+## Visual Evidence
 
 ### Databricks
 

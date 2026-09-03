@@ -1,16 +1,16 @@
--- Bootstrap del catálogo de Unity Catalog y las 3 capas de la arquitectura
--- medallion (bronze/silver/gold). Todo es idempotente (IF NOT EXISTS), por lo
--- que este script se puede re-ejecutar sin riesgo de fallar en un catálogo ya existente.
+-- Bootstrap of the Unity Catalog catalog and the 3 layers of the medallion
+-- architecture (bronze/silver/gold). Everything is idempotent (IF NOT EXISTS), so
+-- this script can be re-run without risk of failing on an already-existing catalog.
 CREATE CATALOG IF NOT EXISTS churn_portfolio;
 CREATE SCHEMA IF NOT EXISTS churn_portfolio.bronze;
 CREATE SCHEMA IF NOT EXISTS churn_portfolio.silver;
 CREATE SCHEMA IF NOT EXISTS churn_portfolio.gold;
 
 
--- Paso manual (fuera de SQL): crea el Volume donde se sube el CSV crudo antes
--- de poder leerlo con read_files() más abajo. Se deja como referencia/documentación
--- porque CREATE VOLUME no se puede invocar vía el endpoint de statements de forma
--- directa en este flujo; reemplazar <warehouse_id> por el ID real del SQL warehouse.
+-- Manual step (outside SQL): creates the Volume where the raw CSV is uploaded before
+-- it can be read with read_files() below. Left as reference/documentation
+-- because CREATE VOLUME can't be invoked directly via the statements endpoint
+-- in this flow; replace <warehouse_id> with the real SQL warehouse ID.
 /*
 databricks api post /api/2.0/sql/statements --profile churn-analysis --json '{
   "warehouse_id": "<warehouse_id>",
@@ -19,16 +19,16 @@ databricks api post /api/2.0/sql/statements --profile churn-analysis --json '{
 }'
 */
 
--- Ingesta bronze: lee el CSV crudo desde el Volume y lo materializa tal cual
--- (sin transformar) como tabla Delta. CREATE OR REPLACE recarga la tabla
--- completa en cada corrida, así que sirve para reprocesos, pero no es
--- incremental ni conserva historial de versiones anteriores del CSV.
+-- Bronze ingestion: reads the raw CSV from the Volume and materializes it as-is
+-- (untransformed) as a Delta table. CREATE OR REPLACE reloads the full
+-- table on every run, so it works for reprocessing, but it is not
+-- incremental and doesn't keep a history of previous CSV versions.
 --
--- Nota: inferSchema => true infiere los tipos de columna a partir del propio
--- archivo, por lo que el esquema resultante puede variar si el CSV cambia
--- entre corridas (p. ej. una columna que hoy parece INT podría inferirse como
--- DOUBLE si aparecen decimales). Para un esquema estable en producción,
--- conviene declarar el esquema explícitamente en vez de inferirlo.
+-- Note: inferSchema => true infers column types from the file itself,
+-- so the resulting schema can vary if the CSV changes between runs
+-- (e.g. a column that looks like INT today could be inferred as
+-- DOUBLE if decimals appear). For a stable schema in production, it's
+-- better to declare the schema explicitly instead of inferring it.
 CREATE OR REPLACE TABLE churn_portfolio.bronze.customer_data AS
 SELECT *
 FROM read_files(

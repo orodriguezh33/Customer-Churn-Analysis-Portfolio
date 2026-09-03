@@ -1,6 +1,6 @@
 {{ config(materialized='view') }}
 
-select customer_id, atributo, valor
+select customer_id, attribute, value
 from (
     select
         customer_id,
@@ -19,11 +19,11 @@ from (
     from {{ ref('gold_customer_data') }}
 ) as base
 unpivot (
-    valor for atributo in (
+    value for attribute in (
         phone_service, multiple_lines, internet_service, online_security,
         online_backup, device_protection_plan, premium_support,
         streaming_tv, streaming_movies, streaming_music,
         unlimited_data, paperless_billing
     )
 )
-order by customer_id, atributo
+order by customer_id, attribute

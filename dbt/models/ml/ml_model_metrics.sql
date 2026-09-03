@@ -1,6 +1,6 @@
--- Métricas del modelo desplegado (logistic_regression) recalculadas al umbral operativo
--- (threshold, elegido en notebooks/08_final_model.ipynb por recall con precision >= 0.55),
--- no al 0.5 por defecto -- ese está en ml_model_candidates. Una sola fila.
+-- Metrics of the deployed model (logistic_regression) recomputed at the operational
+-- threshold (chosen in notebooks/08_final_model.ipynb for recall with precision >= 0.55),
+-- not at the default 0.5 -- that's in ml_model_candidates. Single row.
 {{ config(materialized='view') }}
 
 select

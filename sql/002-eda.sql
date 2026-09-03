@@ -1,19 +1,19 @@
 -- ============================================================================
--- EDA exploratorio sobre la tabla bronze (customer_data), previo a diseñar las
--- transformaciones de la capa silver/gold. Son consultas ad-hoc pensadas para
--- correrse celda por celda en un notebook/SQL editor de Databricks, no un
--- script transaccional (por eso la mayoría no llevan ";" entre sí).
+-- Exploratory EDA on the bronze table (customer_data), prior to designing the
+-- silver/gold layer transformations. These are ad-hoc queries meant to be
+-- run cell by cell in a Databricks notebook/SQL editor, not a
+-- transactional script (that's why most don't have ";" between them).
 -- ============================================================================
 
--- Vistazo rápido de la forma cruda de los datos tal como llegan del CSV.
+-- Quick look at the raw shape of the data as it arrives from the CSV.
 SELECT * FROM churn_portfolio.bronze.customer_data LIMIT 10
 
 
 
--- Distribución de clientes por género y su % sobre el total.
--- Nota: count(Gender) ignora filas con Gender NULL, pero el denominador
--- (subquery con count(*)) sí las cuenta -> si hay nulos, los porcentajes
--- no van a sumar exactamente 100%.
+-- Distribution of customers by gender and their % of the total.
+-- Note: count(Gender) ignores rows with Gender NULL, but the denominator
+-- (subquery with count(*)) does count them -> if there are nulls, the percentages
+-- won't add up to exactly 100%.
 
 SELECT
  Gender,
@@ -34,8 +34,8 @@ Female	4048	63.07260828918666
 
 
 
--- Distribución de clientes por tipo de contrato (mes a mes, 1 año, 2 años) y
--- su % sobre el total. Misma advertencia de NULLs que la consulta anterior.
+-- Distribution of customers by contract type (month-to-month, 1 year, 2 years) and
+-- their % of the total. Same NULL caveat as the previous query.
 SELECT
  Contract,
  count(Contract) AS TotalCount,
@@ -53,9 +53,9 @@ One Year	1413	22.016204425054536
 */
 
 
--- Conteo de clientes y revenue total por Customer_Status (Joined/Stayed/Churned),
--- con el % de revenue que representa cada estado sobre el revenue total.
--- Útil para dimensionar cuánto ingreso está en riesgo por churn.
+-- Count of customers and total revenue by Customer_Status (Joined/Stayed/Churned),
+-- with the % of revenue that each status represents of total revenue.
+-- Useful for sizing how much revenue is at risk from churn.
 SELECT
  Customer_Status,
  count(Customer_Status) AS TotalCount,
@@ -73,8 +73,8 @@ Churned	1732	3411960.580000004	17.522942677209674
 
 */
 
--- Distribución geográfica de clientes por State, ordenada de mayor a menor
--- concentración, para identificar los mercados con más peso.
+-- Geographic distribution of customers by State, ordered from highest to lowest
+-- concentration, to identify the markets with the most weight.
 SELECT
 State,
 count(State) as TotalCount,
@@ -114,8 +114,8 @@ Puducherry	41	0.6388282954191337
 
 
 
--- Valores únicos de Internet_Type, para conocer el dominio de la columna
--- antes de usarla en filtros o en el modelo (ej. DSL, Fiber Optic, Cable, NULL).
+-- Unique values of Internet_Type, to learn the domain of the column
+-- before using it in filters or in the model (e.g. DSL, Fiber Optic, Cable, NULL).
 select distinct Internet_Type from churn_portfolio.bronze.customer_data
 
 
@@ -130,10 +130,10 @@ null
 */
 
 
--- Auditoría de calidad de datos: cuenta nulos columna por columna en un solo
--- pase sobre la tabla bronze. Sirve como checklist antes de definir reglas de
--- limpieza/valores por defecto en la capa silver (qué columnas requieren
--- manejo de nulos y cuáles no).
+-- Data quality audit: counts nulls column by column in a single
+-- pass over the bronze table. Serves as a checklist before defining
+-- cleaning/default-value rules in the silver layer (which columns require
+-- null handling and which don't).
 SELECT
     SUM(CASE WHEN Customer_ID IS NULL THEN 1 ELSE 0 END) AS Customer_ID_Null_Count,
     SUM(CASE WHEN Gender IS NULL THEN 1 ELSE 0 END) AS Gender_Null_Count,
@@ -189,8 +189,8 @@ Churn_Reason_Null_Count = 4686
 */
 
 
--- Cuantifica la anomalía de datos conocida en Monthly_Charge: cuántas filas tienen un valor negativo
--- Este es el número que justifica el flag has_negative_monthly_charge de la proyección silver más abajo.
+-- Quantifies the known data anomaly in Monthly_Charge: how many rows have a negative value.
+-- This is the number that justifies the has_negative_monthly_charge flag in the silver projection below.
 
 
 select
@@ -208,12 +208,12 @@ negative_monthly_charge = 107
 
 
 
--- Prototipo de la proyección silver: renombra columnas de bronze a
--- snake_case y agrega el flag has_negative_monthly_charge para marcar
--- explícitamente los ~107 registros con Monthly_Charge negativo. El valor crudo de
--- monthly_charge se deja intacto -- este flag es lo que se debe usar para
--- excluir esos registros si monthly_charge se usa como feature numérico en
--- un modelo de churn, sin alterar los totales/conteos de BI aguas abajo.
+-- Prototype of the silver projection: renames bronze columns to
+-- snake_case and adds the has_negative_monthly_charge flag to explicitly mark
+-- the ~107 records with negative Monthly_Charge. The raw value of
+-- monthly_charge is left intact -- this flag is what should be used to
+-- exclude those records if monthly_charge is used as a numeric feature in
+-- a churn model, without altering downstream BI totals/counts.
 
 
 select

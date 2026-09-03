@@ -1,4 +1,4 @@
--- Curva ROC del modelo desplegado sobre el test set, submuestreada a ~200 puntos. Ver
+-- ROC curve of the deployed model on the test set, downsampled to ~200 points. See
 -- notebooks/08_final_model.ipynb.
 {{ config(materialized='view') }}
 
